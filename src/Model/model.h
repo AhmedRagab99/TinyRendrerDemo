@@ -1,5 +1,7 @@
 #include <glm/glm.hpp>
 
+namespace model {
+
 class Model {
   std::vector<glm::vec3> verts_;
   std::vector<glm::vec3> norms_;
@@ -15,3 +17,5 @@ public:
   glm::vec3 vert(const int i) const;   // 0 <= i < nverts()
   glm::vec3 normal(const int i) const; // 0 <= i < nverts()
 };
+
+} // namespace model

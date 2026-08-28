@@ -1,5 +1,6 @@
 
 #include "Model/model.h"
+#include "Renderer/LineRenderer.h"
 #include "tgaimage.h"
 #include <cmath>
 #include <cstdlib>
@@ -11,40 +12,6 @@ constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
 
-void setThickPixel(int x, int y, TGAImage &frameBuffer, TGAColor color,
-                   int thickness) {
-  int half = thickness / 2;
-  for (int dy = -half; dy <= half; dy++) {
-    for (int dx = -half; dx <= half; dx++) {
-      frameBuffer.set(x + dx, y + dy, color);
-    }
-  }
-}
-
-void drawOptimizedLine(int ax, int ay, int bx, int by, TGAImage &framebuffer,
-                       TGAColor color, int thickness = 0) {
-
-  bool steep = std::abs(ax - bx) < std::abs(ay - by);
-  if (steep) { // if the line is steep, we transpose the image
-    std::swap(ax, ay);
-    std::swap(bx, by);
-  }
-  if (ax > bx) { // make it left−to−right
-    std::swap(ax, bx);
-    std::swap(ay, by);
-  }
-  int y = ay;
-  int ierror = 0;
-  for (int x = ax; x <= bx; x++) {
-    if (steep) // if transposed, de−transpose
-      framebuffer.set(y, x, color);
-    else
-      framebuffer.set(x, y, color);
-    ierror += 2 * std::abs(by - ay);
-    y += (by > ay ? 1 : -1) * (ierror > bx - ax);
-    ierror -= 2 * (bx - ax) * (ierror > bx - ax);
-  }
-}
 void drawLine(int ax, int ay, int bx, int by, TGAImage &frameBuffer,
               TGAColor color) {
   bool steep = std::abs(ax - bx) < std::abs(ay - by);
@@ -72,7 +39,7 @@ void drawLine(int ax, int ay, int bx, int by, TGAImage &frameBuffer,
 void readObjFile(const std::string fileName, TGAImage &framebuffer) {
 
   // load the model from the .obj file
-  Model model(fileName);
+  model::Model model(fileName);
   std::cout << "Number of vertices: " << model.nverts() << std::endl;
   std::cout << "Number of faces: " << model.nfaces() << std::endl;
   // draw lines between the vertices of each face
@@ -89,7 +56,8 @@ void readObjFile(const std::string fileName, TGAImage &framebuffer) {
       int y0 = static_cast<int>((v0.y + 1.0f) * framebuffer.height() / 2.0f);
       int x1 = static_cast<int>((v1.x + 1.0f) * framebuffer.width() / 2.0f);
       int y1 = static_cast<int>((v1.y + 1.0f) * framebuffer.height() / 2.0f);
-      drawOptimizedLine(x0, y0, x1, y1, framebuffer, red);
+      renderer::LineRenderer::drawOptimizedLine(x0, y0, x1, y1, framebuffer,
+                                                 red);
     }
   }
 }

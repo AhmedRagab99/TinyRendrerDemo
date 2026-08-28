@@ -10,12 +10,9 @@ find_package(OpenMP COMPONENTS CXX)
 
 find_package(GLM REQUIRED)
 
-set(SOURCES
-src/main.cpp
-src/tgaimage.cpp
-src/tgaimage.h
-src/Model/model.cpp
-src/Model/model.h)
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
+src/*.cpp
+src/*.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 

@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 
+namespace model {
+
 Model::Model(const std::string &filename) {
 
   // add cout in all the functions to see if they are being called
@@ -53,3 +55,5 @@ int Model::nfaces() { return (int)faces_.size(); }
 glm::vec3 Model::vert(const int i) { return verts_[i]; }
 glm::vec3 Model::normal(int i) { return norms_[i]; }
 std::vector<int> Model::face(int idx) { return faces_[idx]; }
+
+} // namespace model
