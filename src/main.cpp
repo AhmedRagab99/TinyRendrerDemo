@@ -23,15 +23,20 @@ void drawOptimizedLine(int ax, int ay, int bx, int by, TGAImage &frameBuffer,
   }
   // linear interpolation of y values between the two endpoints
   int y = ay;
-  int deltaX = bx - ax;
+  int iError = 0;
   for (int x = ax; x <= bx; x++) {
     if (steep) {
       frameBuffer.set(y, x, color);
     } else {
       frameBuffer.set(x, y, color);
     }
-    auto deltaY = bx - ax;
-    y += (by - ay) / deltaX;
+    iError += 2 * std::abs(by - ay);
+    // if the error is greater than the distance between the two x values, we
+    // need to move the y value up or down
+    if (iError > std::abs(bx - ax)) {
+      y += (by > ay ? 1 : -1);
+      iError -= 2 * std::abs(bx - ax);
+    }
   }
 }
 void drawLine(int ax, int ay, int bx, int by, TGAImage &frameBuffer,
