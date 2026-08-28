@@ -28,4 +28,5 @@ echo "Build completed successfully!"
 echo "Running the application..."
 # 5. Run the application (assuming the executable is named 'my_app')
 "$BUILD_DIR/SoftwareTinyRender"
+echo "Finished running app"
 
