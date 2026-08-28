@@ -1,8 +1,9 @@
 
 #include "Model/model.h"
+#include "Models.h"
 #include "Renderer/LineRenderer.h"
+#include "Renderer/TriangleRenderer.h"
 #include "tgaimage.h"
-#include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -11,30 +12,6 @@ constexpr TGAColor green = {0, 255, 0, 255};
 constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
-
-void drawLine(int ax, int ay, int bx, int by, TGAImage &frameBuffer,
-              TGAColor color) {
-  bool steep = std::abs(ax - bx) < std::abs(ay - by);
-  if (steep) {
-    // first vertically transpose the line
-    std::swap(ax, ay);
-    std::swap(bx, by);
-  }
-  if (ax > bx) { // make it left−to−right
-    std::swap(ax, bx);
-    std::swap(ay, by);
-  }
-  for (float x = ax; x <= bx; x += 1.0) {
-    // Calculate the interpolation factor t based on the current x position
-    float t = (x - ax) / static_cast<float>(bx - ax);
-    float y = std::round(ay + (by - ay) * t);
-    if (steep)
-      // if transposed, we need to swap x and y when setting the pixel
-      frameBuffer.set(y, x, color);
-    else
-      frameBuffer.set(x, y, color);
-  }
-}
 
 void readObjFile(const std::string fileName, TGAImage &framebuffer) {
 
@@ -57,50 +34,69 @@ void readObjFile(const std::string fileName, TGAImage &framebuffer) {
       int x1 = static_cast<int>((v1.x + 1.0f) * framebuffer.width() / 2.0f);
       int y1 = static_cast<int>((v1.y + 1.0f) * framebuffer.height() / 2.0f);
       renderer::LineRenderer::drawOptimizedLine(x0, y0, x1, y1, framebuffer,
-                                                 red);
+                                                red);
     }
   }
+}
+
+void triangleObj(const std::string fileName, TGAImage &framebuffer) {
+
+  // load the model from the .obj file
+  model::Model model(fileName);
+  std::cout << "Number of vertices: " << model.nverts() << std::endl;
+  std::cout << "Number of faces: " << model.nfaces() << std::endl;
+  // fill each face's triangle
+  for (int i = 0; i < model.nfaces(); i++) {
+    std::vector<int> face = model.face(i);
+    glm::vec3 v0 = model.vert(face[0]);
+    glm::vec3 v1 = model.vert(face[1]);
+    glm::vec3 v2 = model.vert(face[2]);
+
+    int x0 = static_cast<int>((v0.x + 1.0f) * framebuffer.width() / 2.0f);
+    int y0 = static_cast<int>((v0.y + 1.0f) * framebuffer.height() / 2.0f);
+    int x1 = static_cast<int>((v1.x + 1.0f) * framebuffer.width() / 2.0f);
+    int y1 = static_cast<int>((v1.y + 1.0f) * framebuffer.height() / 2.0f);
+    int x2 = static_cast<int>((v2.x + 1.0f) * framebuffer.width() / 2.0f);
+    int y2 = static_cast<int>((v2.y + 1.0f) * framebuffer.height() / 2.0f);
+
+    TGAColor faceColor = {static_cast<uint8_t>(std::rand() % 255),
+                          static_cast<uint8_t>(std::rand() % 255),
+                          static_cast<uint8_t>(std::rand() % 255), 255};
+
+    // renderer::TriangleRenderer::fillTriangle(x0, y0, x1, y1, x2, y2,
+    //                                          framebuffer, faceColor);
+    auto point = Models::Points3D{x0, y0, x1, y1, x2, y2};
+    renderer::TriangleRenderer::fillTriangle(point, framebuffer, faceColor);
+  }
+}
+
+void drawTriangle(int ax, int ay, int bx, int by, int cx, int cy,
+                  TGAImage &framebuffer, TGAColor color) {
+  // sort the vertices, a,b,c in ascending y order (bubblesort yay!)
+  if (ay > by) {
+    std::swap(ax, bx);
+    std::swap(ay, by);
+  }
+  if (ay > cy) {
+    std::swap(ax, cx);
+    std::swap(ay, cy);
+  }
+  if (by > cy) {
+    std::swap(bx, cx);
+    std::swap(by, cy);
+  }
+  renderer::LineRenderer::drawOptimizedLine(ax, ay, bx, by, framebuffer, green);
+  renderer::LineRenderer::drawOptimizedLine(bx, by, cx, cy, framebuffer, green);
+  renderer::LineRenderer::drawOptimizedLine(cx, cy, ax, ay, framebuffer, red);
 }
 
 int main(int argc, char **argv) {
   constexpr int width = 800;
   constexpr int height = 800;
   TGAImage framebuffer(width, height, TGAImage::RGB);
-
-  // int ax = 7, ay = 3;
-  // int bx = 12, by = 37;
-  // int cx = 62, cy = 53;
-  // drawLine(ax, ay, bx, by, framebuffer, blue);
-  // drawLine(cx, cy, bx, by, framebuffer, green);
-  // drawLine(cx, cy, ax, ay, framebuffer, yellow);
-  // drawLine(ax, ay, cx, cy, framebuffer, red);
-  // framebuffer.set(ax, ay, white);
-  // framebuffer.set(bx, by, white);
-  // framebuffer.set(cx, cy, white);
-
   std::srand(std::time({}));
 
-  // readObjFile("african_head.obj", framebuffer);
-  readObjFile("obj/african_head/african_head.obj", framebuffer);
-  // for (int i = 0; i < (1 << 24); i++) {
-  //   int ax = std::rand() % width;
-  //   int ay = std::rand() % height;
-  //   int bx = std::rand() % width;
-  //   int by = std::rand() % height;
-  //   // drawLine(ax, ay, bx, by, framebuffer,
-  //   //          {static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-  //   //           static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-  //   //           static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-  //   //           static_cast<uint8_t>(static_cast<int>(std::rand() %
-  //   //           255))});
-  //   drawOptimizedLine(
-  //       ax, ay, bx, by, framebuffer,
-  //       {static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-  //        static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-  //        static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-  //        static_cast<uint8_t>(static_cast<int>(std::rand() % 255))});
-  // }
-
+  triangleObj("obj/diablo3_pose/diablo3_pose.obj", framebuffer);
   framebuffer.write_tga_file("framebuffer.tga");
   return 0;
 }
