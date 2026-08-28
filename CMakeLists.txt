@@ -8,9 +8,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenMP COMPONENTS CXX)
 
-set(SOURCES src/main.cpp src/tgaimage.cpp src/tgaimage.h )
+find_package(GLM REQUIRED)
+
+set(SOURCES
+src/main.cpp
+src/tgaimage.cpp
+src/tgaimage.h
+src/Model/model.cpp
+src/Model/model.h)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PRIVATE $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+glm::glm
+)
 
 file(GENERATE OUTPUT .gitignore CONTENT "*")
