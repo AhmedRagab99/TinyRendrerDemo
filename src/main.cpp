@@ -8,6 +8,32 @@ constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
 
+void drawOptimizedLine(int ax, int ay, int bx, int by, TGAImage &frameBuffer,
+                       TGAColor color) {
+  bool steep = std::abs(ax - bx) < std::abs(ay - by);
+  if (steep) {
+    // first vertically transpose the line
+    std::swap(ax, ay);
+    std::swap(bx, by);
+  }
+
+  if (ax > bx) { // make it left−to−right
+    std::swap(ax, bx);
+    std::swap(ay, by);
+  }
+  // linear interpolation of y values between the two endpoints
+  int y = ay;
+  int deltaX = bx - ax;
+  for (int x = ax; x <= bx; x++) {
+    if (steep) {
+      frameBuffer.set(y, x, color);
+    } else {
+      frameBuffer.set(x, y, color);
+    }
+    auto deltaY = bx - ax;
+    y += (by - ay) / deltaX;
+  }
+}
 void drawLine(int ax, int ay, int bx, int by, TGAImage &frameBuffer,
               TGAColor color) {
   bool steep = std::abs(ax - bx) < std::abs(ay - by);
@@ -54,11 +80,17 @@ int main(int argc, char **argv) {
     int ay = std::rand() % height;
     int bx = std::rand() % width;
     int by = std::rand() % height;
-    drawLine(ax, ay, bx, by, framebuffer,
-             {static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-              static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-              static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
-              static_cast<uint8_t>(static_cast<int>(std::rand() % 255))});
+    // drawLine(ax, ay, bx, by, framebuffer,
+    //          {static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
+    //           static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
+    //           static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
+    //           static_cast<uint8_t>(static_cast<int>(std::rand() % 255))});
+    drawOptimizedLine(
+        ax, ay, bx, by, framebuffer,
+        {static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
+         static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
+         static_cast<uint8_t>(static_cast<int>(std::rand() % 255)),
+         static_cast<uint8_t>(static_cast<int>(std::rand() % 255))});
   }
 
   framebuffer.write_tga_file("framebuffer.tga");
