@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../tgaimage.h"
+#include "../Image/tgaimage.h"
 
 namespace renderer {
 

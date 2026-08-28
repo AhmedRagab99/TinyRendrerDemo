@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Models.h"
-#include "../tgaimage.h"
+#include "../Image/tgaimage.h"
+#include "../Models/Models.h"
 namespace renderer {
 
 class TriangleRenderer {
