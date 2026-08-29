@@ -16,6 +16,8 @@ void TriangleRenderer::fillOptimizedTriangle(Models::Points3D &point,
   int bbmaxx = std::max(std::max(point.ax, point.bx), point.cx);
   int bbmaxy = std::max(std::max(point.ay, point.by), point.cy);
   double total_area = signed_triangle_area(point);
+
+  // backface culling + discarding triangles that cover less than a pixel
   if (total_area == 0)
     return;
 

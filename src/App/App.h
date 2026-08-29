@@ -4,7 +4,9 @@
 #include "../Model/model.h"
 #include "../Models/Models.h"
 #include "../Renderer/Renderer.h"
+#include "../Window/WindowManager.h"
 #include <glm/glm.hpp>
+#include <memory>
 #include <string>
 
 namespace App {
@@ -22,6 +24,7 @@ private:
   std::string outputFile_ = "framebuffer.tga";
   int width_ = 800;
   int height_ = 800;
+  std::unique_ptr<window::WindowManager> windowManager_;
 };
 
 } // namespace App

@@ -10,6 +10,8 @@ find_package(OpenMP COMPONENTS CXX)
 
 find_package(GLM REQUIRED)
 
+find_package(SDL3 REQUIRED CONFIG)
+
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 src/*.cpp
 src/*.h)
@@ -18,6 +20,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 glm::glm
+SDL3::SDL3
 )
 
 file(GENERATE OUTPUT .gitignore CONTENT "*")
