@@ -22,8 +22,8 @@ void Application::addTriangle(const Models::Points3D &points,
   if (normal.z <= 0.0f)
     return;
 
-  renderer::Renderer::draw(renderer::Primitive::Triangle, points, framebuffer,
-                           color);
+  renderer::Renderer::draw(renderer::Primitive::optimizedTriangle, points,
+                           framebuffer, color);
 }
 
 void Application::loadModel(const std::string &filename,
