@@ -199,3 +199,11 @@ int TGAImage::width() const {
 int TGAImage::height() const {
     return h;
 }
+
+int TGAImage::bytesPerPixel() const {
+    return bpp;
+}
+
+const std::uint8_t *TGAImage::buffer() const {
+    return data.data();
+}

@@ -9,7 +9,15 @@ void Application::start() {
   TGAImage framebuffer(width_, height_, TGAImage::RGB);
   std::srand(std::time({}));
 
+  windowManager_ = std::make_unique<window::WindowManager>(
+      width_, height_, "TinyRenderer - Live Preview");
+
   loadModel(modelPath_, framebuffer);
+
+  if (windowManager_->isOpen()) {
+    windowManager_->present(framebuffer);
+    windowManager_->waitUntilClosed();
+  }
 
   framebuffer.write_tga_file(outputFile_);
 }
@@ -32,11 +40,14 @@ void Application::loadModel(const std::string &filename,
   std::cout << "Number of vertices: " << mdl.nverts() << std::endl;
   std::cout << "Number of faces: " << mdl.nfaces() << std::endl;
 
-  for (int i = 0; i < mdl.nfaces(); i++) {
+  for (int i = 0; i < mdl.nfaces() && windowManager_->isOpen(); i++) {
+    windowManager_->pollEvents();
+
     std::vector<int> face = mdl.face(i);
     glm::vec3 v0 = mdl.vert(face[0]);
     glm::vec3 v1 = mdl.vert(face[1]);
     glm::vec3 v2 = mdl.vert(face[2]);
+    // used for get the normalize version for each obj model
     glm::vec3 normal = glm::cross(v1 - v0, v2 - v0);
 
     int x0 = static_cast<int>((v0.x + 1.0f) * framebuffer.width() / 2.0f);
@@ -52,6 +63,8 @@ void Application::loadModel(const std::string &filename,
 
     addTriangle(Models::Points3D{x0, y0, x1, y1, x2, y2}, normal, framebuffer,
                 faceColor);
+
+    windowManager_->present(framebuffer);
   }
 }
 
