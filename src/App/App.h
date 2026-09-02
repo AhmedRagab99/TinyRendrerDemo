@@ -19,8 +19,8 @@ public:
                    TGAImage &framebuffer, TGAColor color);
 
 private:
-  // std::string modelPath_ = "obj/diablo3_pose/diablo3_pose.obj";
-  std::string modelPath_ = "obj/african_head/african_head.obj";
+  std::string modelPath_ = "obj/diablo3_pose/diablo3_pose.obj";
+  // std::string modelPath_ = "obj/african_head/african_head.obj";
   std::string outputFile_ = "framebuffer.tga";
   int width_ = 800;
   int height_ = 800;

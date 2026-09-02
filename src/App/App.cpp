@@ -19,7 +19,11 @@ void Application::start() {
     windowManager_->waitUntilClosed();
   }
 
-  framebuffer.write_tga_file(outputFile_);
+  if (auto result = framebuffer.write_tga_file(outputFile_); !result) {
+    std::cerr << "Failed to write framebuffer to " << outputFile_
+              << " (error " << static_cast<int>(result.error()) << ")"
+              << std::endl;
+  }
 }
 
 void Application::addTriangle(const Models::Points3D &points,
@@ -36,7 +40,12 @@ void Application::addTriangle(const Models::Points3D &points,
 
 void Application::loadModel(const std::string &filename,
                             TGAImage &framebuffer) {
-  model::Model mdl(filename);
+  auto modelResult = model::Model::load(filename);
+  if (!modelResult) {
+    std::cerr << "Failed to load model: " << filename << std::endl;
+    return;
+  }
+  model::Model &mdl = *modelResult;
   std::cout << "Number of vertices: " << mdl.nverts() << std::endl;
   std::cout << "Number of faces: " << mdl.nfaces() << std::endl;
 
