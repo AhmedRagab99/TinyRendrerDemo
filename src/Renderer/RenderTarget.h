@@ -13,6 +13,7 @@ namespace renderer {
 template <typename T>
 concept RenderTarget = requires(T &t, int x, int y, const TGAColor &c) {
   { t.set(x, y, c) } -> std::same_as<void>;
+  { t.get(x, y) } -> std::convertible_to<TGAColor>;
   { t.width() } -> std::convertible_to<int>;
   { t.height() } -> std::convertible_to<int>;
 };

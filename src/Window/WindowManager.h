@@ -1,10 +1,11 @@
 #pragma once
 
 #include "../Image/tgaimage.h"
-#include "../Utils/PerfStats.h"
+#include "Window.h"
 #include <SDL3/SDL.h>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 namespace window {
 
@@ -30,53 +31,45 @@ private:
   bool initialized_;
 };
 
-struct WindowDeleter {
-  void operator()(SDL_Window *w) const noexcept { SDL_DestroyWindow(w); }
-};
-struct RendererDeleter {
-  void operator()(SDL_Renderer *r) const noexcept { SDL_DestroyRenderer(r); }
-};
-struct TextureDeleter {
-  void operator()(SDL_Texture *t) const noexcept { SDL_DestroyTexture(t); }
-};
-
 } // namespace detail
 
-// Opens a live SDL3 preview window and streams a TGAImage framebuffer to it,
-// so the rasterization process can be watched as it happens rather than only
-// inspected once written to disk.
+// Owns the SDL lifetime and a collection of independent, named Windows, so a
+// renderer with several buffers (framebuffer, z-buffer, ...) can show each
+// one in its own live-updating window instead of being limited to a single
+// view. Windows are addressed by the id string passed to createWindow.
 class WindowManager {
 public:
-  WindowManager(int width, int height, const char *title);
+  WindowManager();
 
   WindowManager(const WindowManager &) = delete;
   WindowManager &operator=(const WindowManager &) = delete;
 
-  // Uploads the framebuffer's current contents and presents them.
-  void present(const TGAImage &framebuffer);
+  // Creates and registers a new window under `id`, replacing any existing
+  // window already registered under that id. Returns the new window, or
+  // nullptr if SDL failed to initialize or window creation failed.
+  Window *createWindow(const std::string &id, int width, int height,
+                       const std::string &title);
 
-  // Pumps the SDL event queue; closes the window on a quit request.
+  // Looks up a previously created window; nullptr if `id` is unknown.
+  Window *getWindow(const std::string &id);
+
+  // Uploads and presents `buffer` in the window registered under `id`.
+  // No-op if no such window exists or it isn't open.
+  void present(const std::string &id, const TGAImage &buffer);
+
+  // Pumps the SDL event queue once, routing each event to the window it
+  // targets (or, for an application-wide quit, to every window).
   void pollEvents();
 
+  // True once SDL initialized and at least one window is still open.
   bool isOpen() const;
 
-  // Pumps events and blocks until the window is closed.
+  // Pumps events and blocks until every window has been closed.
   void waitUntilClosed();
 
 private:
-  // Rewrites the window title to "<base title> | Time: ..s | FPS: .."
-  // whenever the throttled PerfStats says it's due for a refresh.
-  void refreshTitle();
-
-  // Declaration order matters: members are destroyed in reverse order, so
-  // texture_/renderer_/window_ tear down before sdlInit_ calls SDL_Quit().
   detail::SdlInitGuard sdlInit_;
-  std::unique_ptr<SDL_Window, detail::WindowDeleter> window_;
-  std::unique_ptr<SDL_Renderer, detail::RendererDeleter> renderer_;
-  std::unique_ptr<SDL_Texture, detail::TextureDeleter> texture_;
-  bool open_ = false;
-  std::string baseTitle_;
-  utils::PerfStats stats_;
+  std::unordered_map<std::string, std::unique_ptr<Window>> windows_;
 };
 
 } // namespace window

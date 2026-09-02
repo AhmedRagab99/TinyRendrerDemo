@@ -4,84 +4,70 @@
 
 namespace window {
 
-WindowManager::WindowManager(int width, int height, const char *title)
-    : baseTitle_(title) {
-  if (!sdlInit_.ok()) {
+WindowManager::WindowManager() {
+  if (!sdlInit_.ok())
     std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
-    return;
-  }
-
-  window_.reset(SDL_CreateWindow(title, width, height, 0));
-  if (!window_) {
-    std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << "\n";
-    return;
-  }
-
-  renderer_.reset(SDL_CreateRenderer(window_.get(), nullptr));
-  if (!renderer_) {
-    std::cerr << "SDL_CreateRenderer failed: " << SDL_GetError() << "\n";
-    return;
-  }
-
-  texture_.reset(SDL_CreateTexture(renderer_.get(), SDL_PIXELFORMAT_RGB24,
-                                   SDL_TEXTUREACCESS_STREAMING, width, height));
-  if (!texture_) {
-    std::cerr << "SDL_CreateTexture failed: " << SDL_GetError() << "\n";
-    return;
-  }
-
-  open_ = true;
 }
 
-void WindowManager::present(const TGAImage &framebuffer) {
-  if (!open_)
-    return;
+Window *WindowManager::createWindow(const std::string &id, int width,
+                                    int height, const std::string &title) {
+  if (!sdlInit_.ok())
+    return nullptr;
 
-  int pitch = framebuffer.width() * framebuffer.bytesPerPixel();
-  SDL_UpdateTexture(texture_.get(), nullptr, framebuffer.buffer(), pitch);
+  auto window = std::make_unique<Window>(width, height, title);
+  if (!window->isOpen())
+    return nullptr;
 
-  SDL_RenderClear(renderer_.get());
-  // the framebuffer stores row 0 as the bottom of the image, so flip it
-  // vertically to match the orientation of the final written .tga file
-  SDL_RenderTextureRotated(renderer_.get(), texture_.get(), nullptr, nullptr,
-                           0.0, nullptr, SDL_FLIP_VERTICAL);
-  SDL_RenderPresent(renderer_.get());
-
-  stats_.frame();
-  refreshTitle();
+  Window *raw = window.get();
+  windows_[id] = std::move(window);
+  return raw;
 }
 
-void WindowManager::refreshTitle() {
-  if (!open_ || !stats_.shouldRefreshDisplay())
-    return;
+Window *WindowManager::getWindow(const std::string &id) {
+  auto it = windows_.find(id);
+  return it == windows_.end() ? nullptr : it->second.get();
+}
 
-  std::string title = baseTitle_ + " | " + stats_.toString();
-  SDL_SetWindowTitle(window_.get(), title.c_str());
+void WindowManager::present(const std::string &id, const TGAImage &buffer) {
+  if (Window *window = getWindow(id))
+    window->present(buffer);
 }
 
 void WindowManager::pollEvents() {
-  if (!open_)
-    return;
-
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
-    if (event.type == SDL_EVENT_QUIT)
-      open_ = false;
+    if (event.type == SDL_EVENT_QUIT) {
+      for (auto &[id, window] : windows_)
+        window->close();
+      continue;
+    }
+
+    if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+      for (auto &[id, window] : windows_) {
+        if (window->id() == event.window.windowID) {
+          window->close();
+          break;
+        }
+      }
+    }
   }
 }
 
-bool WindowManager::isOpen() const { return open_; }
+bool WindowManager::isOpen() const {
+  for (const auto &[id, window] : windows_) {
+    if (window->isOpen())
+      return true;
+  }
+  return false;
+}
 
 void WindowManager::waitUntilClosed() {
-  while (open_) {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_EVENT_QUIT)
-        open_ = false;
-    }
-    // No new frames are being rendered here, but keep the running time in
-    // the title ticking while the window sits idle.
-    refreshTitle();
+  while (isOpen()) {
+    pollEvents();
+    // No new frames are being rendered here, but keep each window's running
+    // time ticking in its title while it sits idle.
+    for (auto &[id, window] : windows_)
+      window->refreshTitle();
   }
 }
 

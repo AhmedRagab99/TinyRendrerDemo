@@ -2,6 +2,7 @@
 
 #include "../Image/tgaimage.h"
 #include "../Models/Models.h"
+#include "FrameBuffers.h"
 #include "LineRenderer.h"
 #include "RenderTarget.h"
 #include "TriangleRenderer.h"
@@ -14,22 +15,24 @@ class Renderer {
 public:
   template <RenderTarget Target>
   static void draw(Primitive type, Models::Points3D points,
-                   Target &framebuffer, TGAColor color, int thickness = 0);
+                   FrameBuffers<Target> &buffers, TGAColor color,
+                   int thickness = 0);
 };
 
 template <RenderTarget Target>
 void Renderer::draw(Primitive type, Models::Points3D points,
-                    Target &framebuffer, TGAColor color, int thickness) {
+                    FrameBuffers<Target> &buffers, TGAColor color,
+                    int thickness) {
   switch (type) {
   case Primitive::Line:
     LineRenderer::drawOptimizedLine(points.ax, points.ay, points.bx, points.by,
-                                    framebuffer, color, thickness);
+                                    buffers.color, color, thickness);
     break;
   case Primitive::Triangle:
-    TriangleRenderer::fillTriangle(points, framebuffer, color);
+    TriangleRenderer::fillTriangle(points, buffers.color, color);
     break;
   case Primitive::optimizedTriangle:
-    TriangleRenderer::fillOptimizedTriangle(points, framebuffer, color);
+    TriangleRenderer::fillOptimizedTriangle(points, buffers, color);
     break;
   }
 }

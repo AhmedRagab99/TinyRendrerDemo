@@ -26,14 +26,12 @@ std::expected<Model, ModelError> Model::load(const std::string &filename) {
     if (!line.compare(0, 2, "v ")) {
       iss >> trash;
       glm::vec3 v;
-      std::cerr << "Reading vertex: " << line << std::endl;
       for (int i = 0; i < 3; i++)
         iss >> v[i];
       model.verts_.push_back(v);
     } else if (!line.compare(0, 3, "vn ")) {
       iss >> trash >> trash;
       glm::vec3 n;
-      std::cerr << "Reading normal: " << line << std::endl;
       for (int i = 0; i < 3; i++)
         iss >> n[i];
       model.norms_.push_back(n);
@@ -41,7 +39,7 @@ std::expected<Model, ModelError> Model::load(const std::string &filename) {
       std::vector<int> f;
       int itrash, idx;
       iss >> trash;
-      std::cerr << "Reading face: " << line << std::endl;
+
       while (iss >> idx >> trash >> itrash >> trash >> itrash) {
         idx--; // in wavefront obj all indices start at 1, not zero
         f.push_back(idx);

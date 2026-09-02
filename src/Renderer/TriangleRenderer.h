@@ -2,6 +2,7 @@
 
 #include "../Image/tgaimage.h"
 #include "../Models/Models.h"
+#include "FrameBuffers.h"
 #include "LineRenderer.h"
 #include "RenderTarget.h"
 
@@ -23,15 +24,20 @@ public:
 
   template <RenderTarget Target>
   static void fillOptimizedTriangle(Models::Points3D &point,
-                                    Target &framebuffer, TGAColor color);
+                                    FrameBuffers<Target> &buffers,
+                                    TGAColor color);
 };
 
-// used to get the bounding box of the triangle then get the area of the
-// triangle and then plot only the dots if its in the triangle
+// Gets the bounding box of the triangle, then for each pixel inside it
+// computes barycentric weights to test membership and interpolate depth;
+// only pixels closer than what's already in the z-buffer get written, so
+// triangles drawn in any order still occlude correctly.
 template <RenderTarget Target>
 void TriangleRenderer::fillOptimizedTriangle(Models::Points3D &point,
-                                             Target &framebuffer,
+                                             FrameBuffers<Target> &buffers,
                                              TGAColor color) {
+  Target &framebuffer = buffers.color;
+  Target &zbuffer = buffers.zbuffer;
 
   int bbminx = std::min(std::min(point.ax, point.bx), point.cx);
   int bbminy = std::min(std::min(point.ay, point.by), point.cy);
@@ -45,27 +51,31 @@ void TriangleRenderer::fillOptimizedTriangle(Models::Points3D &point,
 
 #pragma omp parallel for
   for (int y = bbminy; y <= bbmaxy; y++) {
-    int xStart = -1;
-    int xEnd = -1;
-
     for (int x = bbminx; x <= bbmaxx; x++) {
-      Models::Points3D pbc(x, y, point.bx, point.by, point.cx, point.cy);
-      Models::Points3D apc(point.ax, point.ay, x, y, point.cx, point.cy);
-      Models::Points3D abp(point.ax, point.ay, point.bx, point.by, x, y);
+      Models::Points3D pbc(x, y, 0, point.bx, point.by, 0, point.cx, point.cy,
+                           0);
+      Models::Points3D apc(point.ax, point.ay, 0, x, y, 0, point.cx, point.cy,
+                           0);
+      Models::Points3D abp(point.ax, point.ay, 0, point.bx, point.by, 0, x, y,
+                           0);
 
       double alpha = signed_triangle_area(pbc) / total_area;
       double beta = signed_triangle_area(apc) / total_area;
       double gamma = signed_triangle_area(abp) / total_area;
 
-      if (alpha >= 0 && beta >= 0 && gamma >= 0) {
-        if (xStart == -1)
-          xStart = x;
-        xEnd = x;
-      }
-    }
+      if (alpha < 0 || beta < 0 || gamma < 0)
+        continue; // outside the triangle
 
-    if (xStart != -1) {
-      LineRenderer::drawOptimizedLine(xStart, y, xEnd, y, framebuffer, color);
+      // depth at this pixel, interpolated from the triangle's own vertex
+      // depths (not the pbc/apc/abp helper triangles above, which only
+      // exist to get area ratios and carry no meaningful z of their own)
+      unsigned char z = static_cast<unsigned char>(
+          alpha * point.az + beta * point.bz + gamma * point.cz);
+      if (z <= zbuffer.get(x, y)[0])
+        continue; // occluded by something already drawn closer
+
+      framebuffer.set(x, y, color);
+      zbuffer.set(x, y, TGAColor{z, z, z, 255});
     }
   }
 }
