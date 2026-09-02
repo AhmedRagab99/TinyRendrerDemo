@@ -1,7 +1,17 @@
 #pragma once
 #include <cstdint>
+#include <expected>
 #include <fstream>
 #include <vector>
+
+enum class TGAError {
+  FileOpenFailed,
+  HeaderIOFailed,
+  UnsupportedFormat,
+  PixelDataIOFailed,
+  FooterIOFailed,
+  WriteFailed,
+};
 
 #pragma pack(push, 1)
 struct TGAHeader {
@@ -30,9 +40,11 @@ struct TGAImage {
   enum Format { GRAYSCALE = 1, RGB = 3, RGBA = 4 };
   TGAImage() = default;
   TGAImage(const int w, const int h, const int bpp);
-  bool read_tga_file(const std::string filename);
-  bool write_tga_file(const std::string filename, const bool vflip = true,
-                      const bool rle = true) const;
+  [[nodiscard]] std::expected<void, TGAError>
+  read_tga_file(const std::string filename);
+  [[nodiscard]] std::expected<void, TGAError>
+  write_tga_file(const std::string filename, const bool vflip = true,
+                const bool rle = true) const;
   void flip_horizontally();
   void flip_vertically();
   TGAColor get(const int x, const int y) const;

@@ -19,8 +19,12 @@ public:
                    TGAImage &framebuffer, TGAColor color);
 
 private:
-  // std::string modelPath_ = "obj/diablo3_pose/diablo3_pose.obj";
-  std::string modelPath_ = "obj/african_head/african_head.obj";
+  // PROJECT_ROOT_DIR is injected by CMake so this resolves regardless of the
+  // working directory the binary is launched from (see CMakeLists.txt).
+  std::string modelPath_ =
+      std::string(PROJECT_ROOT_DIR) + "/obj/african_head/african_head.obj";
+  // std::string modelPath_ =
+  //     std::string(PROJECT_ROOT_DIR) + "/obj/african_head/african_head.obj";
   std::string outputFile_ = "framebuffer.tga";
   int width_ = 800;
   int height_ = 800;

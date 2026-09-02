@@ -4,25 +4,25 @@
 
 TGAImage::TGAImage(const int w, const int h, const int bpp) : w(w), h(h), bpp(bpp), data(w*h*bpp, 0) {}
 
-bool TGAImage::read_tga_file(const std::string filename) {
+std::expected<void, TGAError> TGAImage::read_tga_file(const std::string filename) {
     std::ifstream in;
     in.open(filename, std::ios::binary);
     if (!in.is_open()) {
         std::cerr << "can't open file " << filename << "\n";
-        return false;
+        return std::unexpected(TGAError::FileOpenFailed);
     }
     TGAHeader header;
     in.read(reinterpret_cast<char *>(&header), sizeof(header));
     if (!in.good()) {
         std::cerr << "an error occured while reading the header\n";
-        return false;
+        return std::unexpected(TGAError::HeaderIOFailed);
     }
     w   = header.width;
     h   = header.height;
     bpp = header.bitsperpixel>>3;
     if (w<=0 || h<=0 || (bpp!=GRAYSCALE && bpp!=RGB && bpp!=RGBA)) {
         std::cerr << "bad bpp (or width/height) value\n";
-        return false;
+        return std::unexpected(TGAError::UnsupportedFormat);
     }
     size_t nbytes = bpp*w*h;
     data = std::vector<std::uint8_t>(nbytes, 0);
@@ -30,23 +30,23 @@ bool TGAImage::read_tga_file(const std::string filename) {
         in.read(reinterpret_cast<char *>(data.data()), nbytes);
         if (!in.good()) {
             std::cerr << "an error occured while reading the data\n";
-            return false;
+            return std::unexpected(TGAError::PixelDataIOFailed);
         }
     } else if (10==header.datatypecode||11==header.datatypecode) {
         if (!load_rle_data(in)) {
             std::cerr << "an error occured while reading the data\n";
-            return false;
+            return std::unexpected(TGAError::PixelDataIOFailed);
         }
     } else {
         std::cerr << "unknown file format " << (int)header.datatypecode << "\n";
-        return false;
+        return std::unexpected(TGAError::UnsupportedFormat);
     }
     if (!(header.imagedescriptor & 0x20))
         flip_vertically();
     if (header.imagedescriptor & 0x10)
         flip_horizontally();
     std::cerr << w << "x" << h << "/" << bpp*8 << "\n";
-    return true;
+    return {};
 }
 
 bool TGAImage::load_rle_data(std::ifstream &in) {
@@ -98,7 +98,7 @@ bool TGAImage::load_rle_data(std::ifstream &in) {
     return true;
 }
 
-bool TGAImage::write_tga_file(const std::string filename, const bool vflip, const bool rle) const {
+std::expected<void, TGAError> TGAImage::write_tga_file(const std::string filename, const bool vflip, const bool rle) const {
     constexpr std::uint8_t developer_area_ref[4] = {0, 0, 0, 0};
     constexpr std::uint8_t extension_area_ref[4] = {0, 0, 0, 0};
     constexpr std::uint8_t footer[18] = {'T','R','U','E','V','I','S','I','O','N','-','X','F','I','L','E','.','\0'};
@@ -106,7 +106,7 @@ bool TGAImage::write_tga_file(const std::string filename, const bool vflip, cons
     out.open(filename, std::ios::binary);
     if (!out.is_open()) {
         std::cerr << "can't open file " << filename << "\n";
-        return false;
+        return std::unexpected(TGAError::FileOpenFailed);
     }
     TGAHeader header = {};
     header.bitsperpixel = bpp<<3;
@@ -126,10 +126,10 @@ bool TGAImage::write_tga_file(const std::string filename, const bool vflip, cons
     if (!out.good()) goto err;
     out.write(reinterpret_cast<const char *>(footer), sizeof(footer));
     if (!out.good()) goto err;
-    return true;
+    return {};
 err:
     std::cerr << "can't dump the tga file\n";
-    return false;
+    return std::unexpected(TGAError::WriteFailed);
 }
 
 bool TGAImage::unload_rle_data(std::ofstream &out) const {
