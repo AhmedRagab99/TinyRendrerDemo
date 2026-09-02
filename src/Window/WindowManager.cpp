@@ -4,7 +4,8 @@
 
 namespace window {
 
-WindowManager::WindowManager(int width, int height, const char *title) {
+WindowManager::WindowManager(int width, int height, const char *title)
+    : baseTitle_(title) {
   if (!sdlInit_.ok()) {
     std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
     return;
@@ -45,6 +46,17 @@ void WindowManager::present(const TGAImage &framebuffer) {
   SDL_RenderTextureRotated(renderer_.get(), texture_.get(), nullptr, nullptr,
                            0.0, nullptr, SDL_FLIP_VERTICAL);
   SDL_RenderPresent(renderer_.get());
+
+  stats_.frame();
+  refreshTitle();
+}
+
+void WindowManager::refreshTitle() {
+  if (!open_ || !stats_.shouldRefreshDisplay())
+    return;
+
+  std::string title = baseTitle_ + " | " + stats_.toString();
+  SDL_SetWindowTitle(window_.get(), title.c_str());
 }
 
 void WindowManager::pollEvents() {
@@ -67,6 +79,9 @@ void WindowManager::waitUntilClosed() {
       if (event.type == SDL_EVENT_QUIT)
         open_ = false;
     }
+    // No new frames are being rendered here, but keep the running time in
+    // the title ticking while the window sits idle.
+    refreshTitle();
   }
 }
 

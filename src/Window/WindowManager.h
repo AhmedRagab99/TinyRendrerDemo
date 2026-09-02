@@ -1,8 +1,10 @@
 #pragma once
 
 #include "../Image/tgaimage.h"
+#include "../Utils/PerfStats.h"
 #include <SDL3/SDL.h>
 #include <memory>
+#include <string>
 
 namespace window {
 
@@ -62,6 +64,10 @@ public:
   void waitUntilClosed();
 
 private:
+  // Rewrites the window title to "<base title> | Time: ..s | FPS: .."
+  // whenever the throttled PerfStats says it's due for a refresh.
+  void refreshTitle();
+
   // Declaration order matters: members are destroyed in reverse order, so
   // texture_/renderer_/window_ tear down before sdlInit_ calls SDL_Quit().
   detail::SdlInitGuard sdlInit_;
@@ -69,6 +75,8 @@ private:
   std::unique_ptr<SDL_Renderer, detail::RendererDeleter> renderer_;
   std::unique_ptr<SDL_Texture, detail::TextureDeleter> texture_;
   bool open_ = false;
+  std::string baseTitle_;
+  utils::PerfStats stats_;
 };
 
 } // namespace window

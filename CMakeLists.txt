@@ -23,4 +23,9 @@ glm::glm
 SDL3::SDL3
 )
 
+# Bakes the repo root into the binary so asset paths (obj/...) resolve
+# correctly no matter what directory the executable is launched from.
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}")
+
 file(GENERATE OUTPUT .gitignore CONTENT "*")
